@@ -54,10 +54,13 @@ class Servo:
         # Set the default angle
         self.default_ang=89
         self.pwm = PWM(pin)
+        duty_ns = 500000 + int((self.default_ang / 180) * 2000000)
+        self.pwm.init(freq=50, duty_ns=duty_ns)
 
 
     # 先设置default angle，再启动.默认89
     def set_default_angle(self,default_ang=89):
+        self.pwm.deinit()
         self.default_ang=default_ang
         duty_ns = 500000 + int((self.default_ang / 180) * 2000000)
         self.pwm.init(freq=50, duty_ns=duty_ns)
@@ -70,7 +73,7 @@ class Servo:
         :param angle: -90~90° 的角度
         """
         # 将角度转换为占空比 (1ms~2ms)
-        ang = self.default_ang + angle
+        ang = self.default_ang - angle
         if ang > 180:
             ang=180
         elif ang < 0:
@@ -215,6 +218,14 @@ class line_follower:
         if level1==1 and level2==0 and level3==1 and level4==1 and level5==1:
             print('left')
             return 2
+        
+        if level1==0 and level2==0 and level3==1 and level4==1 and level5==1:
+            print('left 1')
+            return 12
+        
+        if level1==0 and level2==0 and level3==0 and level4==1 and level5==1:
+            print('left 2')
+            return 123
 
         if level1==1 and level2==1 and level3==0 and level4==1 and level5==1:
             print('forward')
@@ -227,6 +238,14 @@ class line_follower:
         if level1==1 and level2==1 and level3==1 and level4==1 and level5==0:
             print('right right')
             return 5
+        
+        if level1==1 and level2==1 and level3==1 and level4==0 and level5==0:
+            print('right 1')
+            return 45
+        
+        if level1==1 and level2==1 and level3==0 and level4==0 and level5==0:
+            print('right 2')
+            return 345
 
     def start_following(self):
         def callback0(timer):
@@ -238,6 +257,8 @@ class line_follower:
 
     def end_following(self):
         self.timer.deinit()
+
+
 
 
 

@@ -170,23 +170,23 @@ class Car:
 
     # 陀螺仪控制计时器闭包启动函数
     def gyro_start(self):
-        # 测试用标签
-#         Pin(22,Pin.OUT).value(1)
         
         # 改变状态
         self.gyro_proceed_stop_status = True
         
         # 车轮回正函数
         def set_back_2():
-            # 角度差距误差阈值：角度差小于 3 degree 后，车轮回正
-            self.wheeling.set_angle(0)
-            # 关掉计时器
             self.gyro_timer.deinit()
+            # 角度差距误差阈值：角度差小于 5 degree 后，车轮回正
+            self.wheeling.set_angle(0)
+            # 测试用标签
+            Pin(22,Pin.OUT).value(0)
+            
             
         
         # 闭包回调函数
         def gyro_callback(t):
-            
+
             self.dir_inprogress=float(self.gyro.read_ang()[2])
             
             error=self.angle_difference(self.dir_target,self.dir_inprogress)
@@ -208,8 +208,32 @@ class Car:
             
             # 操作进行转弯
             self.wheeling.set_angle(self.servo_ang)
+            
+        # 闭包回调函数
+        def gyro_callback_non_PID(t):
 
-        self.gyro_timer.init(mode=Timer.PERIODIC, period=50, callback=gyro_callback)
+            self.dir_inprogress=float(self.gyro.read_ang()[2])
+            
+            error=self.angle_difference(self.dir_target,self.dir_inprogress)
+
+            # PID计算需要转弯的角速度值
+            self.servo_ang =0
+            
+            if error > 0 and abs(error) > 5:
+                self.servo_ang = 40
+            elif error < 0 and abs(error) > 5:
+                self.servo_ang = -40
+            else:
+                self.servo_ang = 0
+                self.gyro_proceed_stop_status = False
+                set_back_2()
+
+            print('angle=%.2f, tar=%.2f, dirnow=%.2f'%(self.servo_ang, self.dir_target, self.dir_inprogress))
+            
+            # 操作进行转弯
+            self.wheeling.set_angle(self.servo_ang)
+
+        self.gyro_timer.init(mode=Timer.PERIODIC, period=50, callback=gyro_callback_non_PID)
 
     # 陀螺仪转弯(particular angle)
     def proceed_gyro(self,angle):
@@ -317,7 +341,7 @@ class FollowLineClass:
         # 确定理论转弯180后的方向
         target_direction = initial_direction + 180
         if task == 3:
-            target_direction += 45
+            target_direction = target_direction + after_rotation_angle * direction_of_rotation
     
         # 将结果限制在-180度到180度的范围内
         if target_direction > 180:
@@ -338,7 +362,7 @@ class FollowLineClass:
             else:
                 # 测试用标签
                 Pin(22,Pin.OUT).value(1)
-                self.s.proceed_gyro(after_rotation_angle+direction_of_rotation*15)
+                self.s.proceed_gyro((after_rotation_angle+10)*direction_of_rotation)
             
 
     
@@ -360,6 +384,15 @@ class FollowLineClass:
                     self.s.wheeling.set_angle(27)
                 elif status == 5:
                     self.s.wheeling.set_angle(45)
+                elif status == 12:
+                    self.s.wheeling.set_angle(-35)
+                elif status == 123:
+                    self.s.wheeling.set_angle(-45)
+                elif status == 45:
+                    self.s.wheeling.set_angle(35)
+                elif status == 345:
+                    self.s.wheeling.set_angle(45)
+
 
             # 目标角度与当前角度小于10度时，转特定的弯角+180度
             else:
@@ -448,8 +481,6 @@ def task2():
     task2_timer.init(mode=Timer.PERIODIC, period=100, callback=callback_task_2)
     
 
-
-
 def task3():
     '''
     任务3，直线行驶+巡线
@@ -463,18 +494,19 @@ def task3():
 
     t.s.motor_run(100)
     
-    task2_timer=Timer()
+    task3_timer=Timer()
     
     t.status = 0  #一开始是0，第一次碰到黑线+1，改变callback逻辑为巡线，之后再+1
     
     def callback_task_3(timer):
+        # Lap 1
         if t.status == 0:
             if linefollower.detect_main() == False:
                 t.status+=1
 
         if t.status == 1:
             # 开始巡线
-            t.follow_line_segment(1,45,3)
+            t.follow_line_segment(1,35,3)
             t.status+=1
 
         if t.status == 3:
@@ -482,12 +514,123 @@ def task3():
                 t.status+=1
 
         if t.status == 4:
-            t.follow_line_segment(1,-1)  # 第二个参数-1表示停住
+            t.follow_line_segment(1,-1,3)
             t.status+=1
-#             task2_timer.deinit()
+        
+
+    task3_timer.init(mode=Timer.PERIODIC, period=100, callback=callback_task_3)
 
 
-    task2_timer.init(mode=Timer.PERIODIC, period=100, callback=callback_task_3)
+
+
+def task4():
+    '''
+    任务4，直线行驶+巡线
+    '''
+    
+    t=FollowLineClass()
+            
+    linefollower = line_follower(D_1,D_2,D_3,D_4,D_5)
+    
+    utime.sleep(2)
+
+    t.s.motor_run(100)
+    
+    task4_timer=Timer()
+    
+    t.status = 0  #一开始是0，第一次碰到黑线+1，改变callback逻辑为巡线，之后再+1
+    
+    def callback_task_4(timer):
+        # Lap 1
+#         if t.status == 0:
+#             if linefollower.detect_main() == False:
+#                 t.status+=1
+# 
+#         if t.status == 1:
+#             t.status+=1
+#             # 开始巡线
+#             t.follow_line_segment(1,36,3)
+            
+
+#         if t.status == 3:
+#             if linefollower.detect_main() == False:
+#                 t.status+=1
+# 
+#         if t.status == 4:
+#             t.status+=1
+#             t.follow_line_segment(-1,36,3)
+#             
+#         if t.status == 6:
+#             t.status == 0
+
+
+        if t.status == 0:
+            t.status+=1
+            # 开始巡线
+            t.follow_line_segment(1,36,3)
+
+        if t.status == 2:
+            t.status+=1
+            t.follow_line_segment(-1,36,3)
+            
+        if t.status == 3:
+            t.status == 0
+        
+#         # Lap 2
+#         if t.status == 6:
+#             if linefollower.detect_main() == False:
+#                 t.status+=1
+# 
+#         if t.status == 7:
+#             # 开始巡线
+#             t.follow_line_segment(1,35,3)
+#             t.status+=1
+# 
+#         if t.status == 9:
+#             if linefollower.detect_main() == False:
+#                 t.status+=1
+# 
+#         if t.status == 10:
+#             t.follow_line_segment(-1,35,3)
+#             t.status+=1
+
+#         # Lap 3
+#         if t.status == 12:
+#             if linefollower.detect_main() == False:
+#                 t.status+=1
+# 
+#         if t.status == 13:
+#             # 开始巡线
+#             t.follow_line_segment(1,35,3)
+#             t.status+=1
+# 
+#         if t.status == 15:
+#             if linefollower.detect_main() == False:
+#                 t.status+=1
+# 
+#         if t.status == 16:
+#             t.follow_line_segment(1,35,3)
+#             t.status+=1
+# 
+#         # Lap 4
+#         if t.status == 18:
+#             if linefollower.detect_main() == False:
+#                 t.status+=1
+# 
+#         if t.status == 19:
+#             # 开始巡线
+#             t.follow_line_segment(1,35,3)
+#             t.status+=1
+# 
+#         if t.status == 21:
+#             if linefollower.detect_main() == False:
+#                 t.status+=1
+# 
+#         if t.status == 22:
+#             t.follow_line_segment(1,-1,3)
+#             t.status+=1
+
+    task4_timer.init(mode=Timer.PERIODIC, period=50, callback=callback_task_4)
 
 
 
@@ -495,38 +638,23 @@ def task3():
 
 
 if __name__ == '__main__':
-#     s=Car()
-#     s.motor_start()
-#     s.motor_run(100)
-#     utime.sleep(2)
-#     s.proceed_gyro(45)
-#     utime.sleep(10)
-#     s.proceed_gyro(-45)
-#     utime.sleep(5)
-#     s.end_process()
+    # s=Car()
+    # s.motor_run(0)
+    # utime.sleep(2)
+    # s.proceed_gyro(45)
+    # utime.sleep(5)
+    # s.end_process()
 
-    task3()
+    task4()
 
 #     t=FollowLineClass()
 #     t.s.motor_run(100)
 #     utime.sleep(1)
-#     t.s.proceed_gyro(45)
+#     t.s.proceed_gyro(60)
 #     utime.sleep(4)
 #     t.s.end_process()
-#     t.s.deinit()
+#     t.deinit()
     
-    
-    
-
-
-
-
-
-
-
-
-
-
 
 
 
