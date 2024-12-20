@@ -259,7 +259,7 @@ class Car:
             
         default_ang = self.servo_ang
 
-        self.wheeling.set_servo_straight(default_ang)
+        self.wheeling.set_angle(0)
         print(default_ang)
         print('\n\n')
 

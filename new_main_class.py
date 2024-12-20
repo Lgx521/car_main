@@ -1,4 +1,4 @@
-from motion_control import motor, PID, counter, wheel, line_follower
+from motion_control import motor, PID, counter, Servo, line_follower
 from machine import Pin, PWM, Timer, I2C
 import utime
 from jy61p import jy61p_i2c
@@ -66,7 +66,7 @@ class Car:
 
     def __init__(self):
         self.gyro = jy61p_i2c()
-        self.gyro_pid = PID(5,0,10,0)
+        self.gyro_pid = PID(6,0,11,0)
         self.gyro.init()
 
         self.start_time=0
@@ -89,7 +89,7 @@ class Car:
         self.gyro_proceed_stop_status=False
 
         # 实例化转弯类的对象
-        self.wheeling = wheel(SERVO)
+        self.wheeling = Servo(SERVO)
 
         # 电机编码器返回频率计算值
         self.freq_1 = 0
@@ -178,11 +178,10 @@ class Car:
         
         # 车轮回正函数
         def set_back_2():
+            # 角度差距误差阈值：角度差小于 3 degree 后，车轮回正
+            self.wheeling.set_angle(0)
             # 关掉计时器
             self.gyro_timer.deinit()
-            # 角度差距误差阈值：角度差小于 3 degree 后车轮回正
-            self.wheeling.wheel_particular_ang(0)
-            Pin(22,Pin.OUT).value(1)
             
         
         # 闭包回调函数
@@ -193,12 +192,13 @@ class Car:
             error=self.angle_difference(self.dir_target,self.dir_inprogress)
 
             # PID计算需要转弯的角速度值
-            self.servo_ang = self.gyro_pid.compute_2(error)/2  # 这里的输出是舵机角度，调参，下面准直里也有一个
+            self.servo_ang = self.gyro_pid.compute_2(error)  # 这里的输出是舵机角度，调参，下面准直里也有一个
             
-            if abs(error) < 3:
+            if abs(error) < 5:
                 if self.gyro_proceed_stop_status:
+                    self.gyro_proceed_stop_status = False
                     set_back_2()
-                self.gyro_proceed_stop_status = False
+                    
             
             if self.servo_ang > 45:  # 设定最大转弯的角为45度
                 self.servo_ang=45
@@ -207,9 +207,9 @@ class Car:
             print('angle=%.2f, tar=%.2f, dirnow=%.2f'%(self.servo_ang, self.dir_target, self.dir_inprogress))
             
             # 操作进行转弯
-            self.wheeling.wheel_particular_ang(self.servo_ang)
+            self.wheeling.set_angle(self.servo_ang)
 
-        self.gyro_timer.init(mode=Timer.PERIODIC, period=100, callback=gyro_callback)
+        self.gyro_timer.init(mode=Timer.PERIODIC, period=50, callback=gyro_callback)
 
     # 陀螺仪转弯(particular angle)
     def proceed_gyro(self,angle):
@@ -259,7 +259,7 @@ class Car:
             
         default_ang = self.servo_ang
 
-        self.wheeling.set_servo_straight(default_ang)
+        self.wheeling.set_angle(0)
         print(default_ang)
         print('\n\n')
 
@@ -296,7 +296,7 @@ class FollowLineClass:
     '''
     确认转了180度之后再拐弯，而不是寻线结束后直接拐弯
     '''
-    def follow_line_segment(self, direction_of_rotation, after_rotation_angle):
+    def follow_line_segment(self, direction_of_rotation, after_rotation_angle, task=2):
         '''
         @param: direction_of_rotation：相对半圆弧的运动方向：1->逆时针，-1->顺时针
         @param: after_rotation_angle：在完成巡线后转弯的角度
@@ -316,6 +316,8 @@ class FollowLineClass:
 
         # 确定理论转弯180后的方向
         target_direction = initial_direction + 180
+        if task == 3:
+            target_direction += 45
     
         # 将结果限制在-180度到180度的范围内
         if target_direction > 180:
@@ -326,17 +328,18 @@ class FollowLineClass:
         def set_back():
             # 设置status
             self.status+=1
+            # 车轮回正
+            self.s.wheeling.set_angle(0)
             # 关掉计时器
             self.line_follow_timer.deinit()
-            # 车轮回正
-            self.s.wheeling.set_servo_straight()
             # 完成剩余的转弯过程
             if after_rotation_angle == -1:
-                # 测试用标签
-                Pin(22,Pin.OUT).value(1)
                 self.s.motor_run(0)
             else:
-                self.s.proceed_gyro(after_rotation_angle+direction_of_rotation*10)
+                # 测试用标签
+                Pin(22,Pin.OUT).value(1)
+                self.s.proceed_gyro(after_rotation_angle+direction_of_rotation*15)
+            
 
     
         # 巡线开始跑，检测当前的角度
@@ -345,25 +348,25 @@ class FollowLineClass:
             dir_now = float(self.s.gyro.read_ang()[2])
 
             # 目标角度与当前角度差距大于10度，巡线
-            if abs(target_direction-dir_now) > 5:
+            if abs(target_direction-dir_now) > 10:
                 status=linefollower.follow_main()
                 if status == 1:
-                    self.s.wheeling.wheel_particular_ang(-45)
+                    self.s.wheeling.set_angle(-45)
                 elif status == 2:
-                    self.s.wheeling.wheel_particular_ang(-27)
+                    self.s.wheeling.set_angle(-27)
                 elif status == 3:
-                    self.s.wheeling.wheel_particular_ang(0)
+                    self.s.wheeling.set_angle(0)
                 elif status == 4:
-                    self.s.wheeling.wheel_particular_ang(27)
+                    self.s.wheeling.set_angle(27)
                 elif status == 5:
-                    self.s.wheeling.wheel_particular_ang(45)
+                    self.s.wheeling.set_angle(45)
 
             # 目标角度与当前角度小于10度时，转特定的弯角+180度
             else:
                 # 先回正然后断掉计时器，再完成后续的转弯
                 if self.line_follow_status:
                     set_back()
-                self.line_follow_status = False
+                    self.line_follow_status = False
 
                 
                 # 测试时使用，到这里直接结束进程
@@ -438,12 +441,56 @@ def task2():
 
         if t.status == 4:
             t.follow_line_segment(-1,-1)  # 第二个参数-1表示停住
-#             t.status+=1
-            task2_timer.deinit()
+            t.status+=1
+#             task2_timer.deinit()
 
 
     task2_timer.init(mode=Timer.PERIODIC, period=100, callback=callback_task_2)
     
+
+
+
+def task3():
+    '''
+    任务3，直线行驶+巡线
+    '''
+    
+    t=FollowLineClass()
+            
+    linefollower = line_follower(D_1,D_2,D_3,D_4,D_5)
+    
+    utime.sleep(2)
+
+    t.s.motor_run(100)
+    
+    task2_timer=Timer()
+    
+    t.status = 0  #一开始是0，第一次碰到黑线+1，改变callback逻辑为巡线，之后再+1
+    
+    def callback_task_3(timer):
+        if t.status == 0:
+            if linefollower.detect_main() == False:
+                t.status+=1
+
+        if t.status == 1:
+            # 开始巡线
+            t.follow_line_segment(1,45,3)
+            t.status+=1
+
+        if t.status == 3:
+            if linefollower.detect_main() == False:
+                t.status+=1
+
+        if t.status == 4:
+            t.follow_line_segment(1,-1)  # 第二个参数-1表示停住
+            t.status+=1
+#             task2_timer.deinit()
+
+
+    task2_timer.init(mode=Timer.PERIODIC, period=100, callback=callback_task_3)
+
+
+
 
 
 
@@ -458,18 +505,20 @@ if __name__ == '__main__':
 #     utime.sleep(5)
 #     s.end_process()
 
-#     task2()
+    task3()
 
-    t=FollowLineClass()
-    t.s.motor_run(100)
-    utime.sleep(1)
-    t.s.proceed_gyro(45)
-    utime.sleep(4)
-    t.s.end_process()
-    t.s.deinit()
+#     t=FollowLineClass()
+#     t.s.motor_run(100)
+#     utime.sleep(1)
+#     t.s.proceed_gyro(45)
+#     utime.sleep(4)
+#     t.s.end_process()
+#     t.s.deinit()
     
     
     
+
+
 
 
 
