@@ -20,14 +20,14 @@ PWM_OUT_1 = 6
 M1 = 7
 M2 = 8
 PWM_IN_1 = 21
-PWM_IN_2 = 20
+# PWM_IN_2 = 20
 
 # Motor2 所有控制
 PWM_OUT_2 = 10
 M3 = 12
 M4 = 11
 PWM_IN_3 = 19
-PWM_IN_4 = 18
+# PWM_IN_4 = 18
 
 # Servo PWM 输出
 SERVO = 15
@@ -38,6 +38,7 @@ EXT_IRT_INIT = 22
 
 # 程序状态指示
 STATUS_LED = 17
+BUZZER = 20
 
 # 红外模块数字输入
 D_1 = 26
@@ -99,7 +100,15 @@ class Car:
         self.counter1 = counter(PWM_IN_1)
         self.counter2 = counter(PWM_IN_3)
 
+        # 启动电机
         self.motor_start()
+
+        # 蜂鸣器与led
+        self.sound_timer = Timer()
+        self.pinled = Pin(STATUS_LED, Pin.OUT)
+        self.pinled.value(0)
+        self.pinbuzzer = Pin(BUZZER, Pin.OUT)
+        self.pinbuzzer.value(1)
         
         print('car is ready')
 
@@ -227,6 +236,7 @@ class Car:
                 self.servo_ang = 0
                 self.gyro_proceed_stop_status = False
                 set_back_2()
+                
 
             print('angle=%.2f, tar=%.2f, dirnow=%.2f'%(self.servo_ang, self.dir_target, self.dir_inprogress))
             
@@ -257,6 +267,17 @@ class Car:
         # 开始陀螺仪转弯
         self.gyro_start()
 
+
+    def sound_and_flash_light(self):
+        self.pinled.value(1)
+        self.pinbuzzer.value(0)
+        def callback(t):
+            self.pinled.value(0)
+            self.pinbuzzer.value(1)
+            t.deinit()
+        self.sound_timer.init(mode=Timer.ONE_SHOT, period=500, callback=callback)
+
+
     # 终止整个程序进程
     def end_process(self):
         self.motor_run(0)
@@ -266,7 +287,7 @@ class Car:
         self.gyro_timer.deinit()
         self.counter1.end_count()
         self.counter2.end_count()
-        Pin(STATUS_LED,Pin.OUT).value(0)
+#         Pin(STATUS_LED,Pin.OUT).value(0)
 
 
 
@@ -320,7 +341,7 @@ class FollowLineClass:
     '''
     确认转了180度之后再拐弯，而不是寻线结束后直接拐弯
     '''
-    def follow_line_segment(self, direction_of_rotation, after_rotation_angle, task=2):
+    def follow_line_segment(self, direction_of_rotation, after_rotation_angle, task=2, if_stop=False):
         '''
         @param: direction_of_rotation：相对半圆弧的运动方向：1->逆时针，-1->顺时针
         @param: after_rotation_angle：在完成巡线后转弯的角度
@@ -350,19 +371,18 @@ class FollowLineClass:
             target_direction += 360
 
         def set_back():
+            self.line_follow_timer.deinit()
             # 设置status
             self.status+=1
             # 车轮回正
             self.s.wheeling.set_angle(0)
-            # 关掉计时器
-            self.line_follow_timer.deinit()
             # 完成剩余的转弯过程
-            if after_rotation_angle == -1:
+            if if_stop:
                 self.s.motor_run(0)
             else:
                 # 测试用标签
                 Pin(22,Pin.OUT).value(1)
-                self.s.proceed_gyro((after_rotation_angle+10)*direction_of_rotation)
+                self.s.proceed_gyro((after_rotation_angle+15)*direction_of_rotation)
             
 
     
@@ -372,7 +392,7 @@ class FollowLineClass:
             dir_now = float(self.s.gyro.read_ang()[2])
 
             # 目标角度与当前角度差距大于10度，巡线
-            if abs(target_direction-dir_now) > 10:
+            if abs(target_direction-dir_now) > 15:
                 status=linefollower.follow_main()
                 if status == 1:
                     self.s.wheeling.set_angle(-45)
@@ -408,7 +428,7 @@ class FollowLineClass:
 #                 self.deinit()
 
 
-        self.line_follow_timer.init(mode=Timer.PERIODIC, period=100, callback=line_follow_callback)
+        self.line_follow_timer.init(mode=Timer.PERIODIC, period=50, callback=line_follow_callback)
 
 
 
@@ -432,6 +452,7 @@ def task1():
     def callback_task_1(t):
         if linefollower.detect_main() == False:
             print('stop')
+            s.sound_and_flash_light()
             s.motor_run(0)
             s.end_process()
             task1_timer.deinit()
@@ -461,24 +482,28 @@ def task2():
     def callback_task_2(timer):
         if t.status == 0:
             if linefollower.detect_main() == False:
+                t.s.sound_and_flash_light()
                 t.status+=1
 
         if t.status == 1:
             # 开始巡线
             t.follow_line_segment(-1,0)
+            t.s.sound_and_flash_light()
             t.status+=1
 
         if t.status == 3:
             if linefollower.detect_main() == False:
+                t.s.sound_and_flash_light()
                 t.status+=1
 
         if t.status == 4:
+            t.s.sound_and_flash_light()
             t.follow_line_segment(-1,-1)  # 第二个参数-1表示停住
             t.status+=1
 #             task2_timer.deinit()
 
 
-    task2_timer.init(mode=Timer.PERIODIC, period=100, callback=callback_task_2)
+    task2_timer.init(mode=Timer.PERIODIC, period=50, callback=callback_task_2)
     
 
 def task3():
@@ -503,22 +528,26 @@ def task3():
         if t.status == 0:
             if linefollower.detect_main() == False:
                 t.status+=1
-
+                t.s.sound_and_flash_light()
+                
         if t.status == 1:
             # 开始巡线
-            t.follow_line_segment(1,35,3)
+            t.follow_line_segment(1,38,3,False)
+            t.s.sound_and_flash_light()
             t.status+=1
 
         if t.status == 3:
             if linefollower.detect_main() == False:
                 t.status+=1
+                t.s.sound_and_flash_light()
 
         if t.status == 4:
-            t.follow_line_segment(1,-1,3)
+            t.follow_line_segment(-1,38,3,True)
+            t.s.sound_and_flash_light()
             t.status+=1
         
 
-    task3_timer.init(mode=Timer.PERIODIC, period=100, callback=callback_task_3)
+    task3_timer.init(mode=Timer.PERIODIC, period=50, callback=callback_task_3)
 
 
 
@@ -638,14 +667,15 @@ def task4():
 
 
 if __name__ == '__main__':
-    # s=Car()
-    # s.motor_run(0)
-    # utime.sleep(2)
-    # s.proceed_gyro(45)
-    # utime.sleep(5)
-    # s.end_process()
+#     s=Car()
+#     s.motor_run(0)
+#     utime.sleep(2)
+#     s.sound_and_flash_light()
+#     utime.sleep(2)
+#     s.end_process()
 
-    task4()
+
+    task1()
 
 #     t=FollowLineClass()
 #     t.s.motor_run(100)
@@ -655,6 +685,8 @@ if __name__ == '__main__':
 #     t.s.end_process()
 #     t.deinit()
     
+
+
 
 
 
