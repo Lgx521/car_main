@@ -542,57 +542,57 @@ def task4():
     
     def callback_task_4(timer):
         # Lap 1
-#         if t.status == 0:
-#             if linefollower.detect_main() == False:
-#                 t.status+=1
-# 
-#         if t.status == 1:
-#             t.status+=1
-#             # 开始巡线
-#             t.follow_line_segment(1,36,3)
-            
-
-#         if t.status == 3:
-#             if linefollower.detect_main() == False:
-#                 t.status+=1
-# 
-#         if t.status == 4:
-#             t.status+=1
-#             t.follow_line_segment(-1,36,3)
-#             
-#         if t.status == 6:
-#             t.status == 0
-
-
         if t.status == 0:
+            if linefollower.detect_main() == False:
+                t.status+=1
+
+        if t.status == 1:
             t.status+=1
             # 开始巡线
             t.follow_line_segment(1,36,3)
+            
 
-        if t.status == 2:
+        if t.status == 3:
+            if linefollower.detect_main() == False:
+                t.status+=1
+
+        if t.status == 4:
             t.status+=1
             t.follow_line_segment(-1,36,3)
             
-        if t.status == 3:
+        if t.status == 6:
             t.status == 0
+
+
+        # if t.status == 0:
+        #     t.status+=1
+        #     # 开始巡线
+        #     t.follow_line_segment(1,36,3)
+
+        # if t.status == 2:
+        #     t.status+=1
+        #     t.follow_line_segment(-1,36,3)
+            
+        # if t.status == 3:
+        #     t.status == 0
         
-#         # Lap 2
-#         if t.status == 6:
-#             if linefollower.detect_main() == False:
-#                 t.status+=1
-# 
-#         if t.status == 7:
-#             # 开始巡线
-#             t.follow_line_segment(1,35,3)
-#             t.status+=1
-# 
-#         if t.status == 9:
-#             if linefollower.detect_main() == False:
-#                 t.status+=1
-# 
-#         if t.status == 10:
-#             t.follow_line_segment(-1,35,3)
-#             t.status+=1
+        # Lap 2
+        if t.status == 6:
+            if linefollower.detect_main() == False:
+                t.status+=1
+
+        if t.status == 7:
+            # 开始巡线
+            t.follow_line_segment(1,35,3)
+            t.status+=1
+
+        if t.status == 9:
+            if linefollower.detect_main() == False:
+                t.status+=1
+
+        if t.status == 10:
+            t.follow_line_segment(-1,35,3)
+            t.status+=1
 
 #         # Lap 3
 #         if t.status == 12:
