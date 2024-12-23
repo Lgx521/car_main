@@ -150,8 +150,8 @@ class Car:
                 self.m1.backward(duty_1)
                 self.m2.backward(duty_2)
                 
-            print('m1 freq=%.2f rpm=%.2f;  m2 freq=%.2f rpm=%.2f' % (self.freq_1,self.freq_to_rpm(self.freq_1), self.freq_2,self.freq_to_rpm(self.freq_2)) )
-            print('m1&2 target=%.2f'%(self.target))
+#             print('m1 freq=%.2f rpm=%.2f;  m2 freq=%.2f rpm=%.2f' % (self.freq_1,self.freq_to_rpm(self.freq_1), self.freq_2,self.freq_to_rpm(self.freq_2)) )
+#             print('m1&2 target=%.2f'%(self.target))
 
         # 开始计时
         self.timer_dutyset.init(mode=Timer.PERIODIC, period=50, callback=duty_set)
@@ -383,6 +383,8 @@ class FollowLineClass:
                 # 测试用标签
                 Pin(22,Pin.OUT).value(1)
                 self.s.proceed_gyro((after_rotation_angle+15)*direction_of_rotation)
+                # 声光提示
+                self.s.sound_and_flash_light()
             
 
     
@@ -392,7 +394,7 @@ class FollowLineClass:
             dir_now = float(self.s.gyro.read_ang()[2])
 
             # 目标角度与当前角度差距大于10度，巡线
-            if abs(target_direction-dir_now) > 15:
+            if abs(self.s.angle_difference(target_direction,dir_now)) > 15:
                 status=linefollower.follow_main()
                 if status == 1:
                     self.s.wheeling.set_angle(-45)
@@ -428,7 +430,7 @@ class FollowLineClass:
 #                 self.deinit()
 
 
-        self.line_follow_timer.init(mode=Timer.PERIODIC, period=50, callback=line_follow_callback)
+        self.line_follow_timer.init(mode=Timer.PERIODIC, period=25, callback=line_follow_callback)
 
 
 
@@ -563,7 +565,7 @@ def task4():
     
     utime.sleep(2)
 
-    t.s.motor_run(100)
+    t.s.motor_run(120)
     
     task4_timer=Timer()
     
@@ -574,92 +576,138 @@ def task4():
         if t.status == 0:
             if linefollower.detect_main() == False:
                 t.status+=1
-
+                t.s.sound_and_flash_light()
+                
         if t.status == 1:
-            t.status+=1
             # 开始巡线
-            t.follow_line_segment(1,36,3)
-            
+            t.follow_line_segment(1,38,3,False)
+            t.s.sound_and_flash_light()
+            t.status+=1
 
         if t.status == 3:
             if linefollower.detect_main() == False:
                 t.status+=1
+                t.s.sound_and_flash_light()
 
         if t.status == 4:
+            t.follow_line_segment(-1,40,3,False)
+            t.s.sound_and_flash_light()
             t.status+=1
-            t.follow_line_segment(-1,36,3)
-            
-        if t.status == 6:
-            t.status == 0
 
-
-        # if t.status == 0:
-        #     t.status+=1
-        #     # 开始巡线
-        #     t.follow_line_segment(1,36,3)
-
-        # if t.status == 2:
-        #     t.status+=1
-        #     t.follow_line_segment(-1,36,3)
-            
-        # if t.status == 3:
-        #     t.status == 0
-        
         # Lap 2
         if t.status == 6:
             if linefollower.detect_main() == False:
                 t.status+=1
-
+                t.s.sound_and_flash_light()
+                
         if t.status == 7:
             # 开始巡线
-            t.follow_line_segment(1,35,3)
+            t.follow_line_segment(1,40,3,False)
+            t.s.sound_and_flash_light()
             t.status+=1
 
         if t.status == 9:
             if linefollower.detect_main() == False:
                 t.status+=1
+                t.s.sound_and_flash_light()
 
         if t.status == 10:
-            t.follow_line_segment(-1,35,3)
+            t.follow_line_segment(-1,40,3,False)
+            t.s.sound_and_flash_light()
             t.status+=1
 
-#         # Lap 3
-#         if t.status == 12:
-#             if linefollower.detect_main() == False:
-#                 t.status+=1
-# 
-#         if t.status == 13:
-#             # 开始巡线
-#             t.follow_line_segment(1,35,3)
-#             t.status+=1
-# 
-#         if t.status == 15:
-#             if linefollower.detect_main() == False:
-#                 t.status+=1
-# 
-#         if t.status == 16:
-#             t.follow_line_segment(1,35,3)
-#             t.status+=1
-# 
-#         # Lap 4
-#         if t.status == 18:
-#             if linefollower.detect_main() == False:
-#                 t.status+=1
-# 
-#         if t.status == 19:
-#             # 开始巡线
-#             t.follow_line_segment(1,35,3)
-#             t.status+=1
-# 
-#         if t.status == 21:
-#             if linefollower.detect_main() == False:
-#                 t.status+=1
-# 
-#         if t.status == 22:
-#             t.follow_line_segment(1,-1,3)
-#             t.status+=1
+        # Lap 3
+        if t.status == 12:
+            if linefollower.detect_main() == False:
+                t.status+=1
+                t.s.sound_and_flash_light()
+                
+        if t.status == 13:
+            # 开始巡线
+            t.follow_line_segment(1,40,3,False)
+            t.s.sound_and_flash_light()
+            t.status+=1
 
-    task4_timer.init(mode=Timer.PERIODIC, period=50, callback=callback_task_4)
+        if t.status == 15:
+            if linefollower.detect_main() == False:
+                t.status+=1
+                t.s.sound_and_flash_light()
+
+
+        if t.status == 16:
+            t.follow_line_segment(-1,40,3,False)
+            t.s.sound_and_flash_light()
+            t.status+=1
+
+        # Lap 4
+        if t.status == 18:
+            if linefollower.detect_main() == False:
+                t.status+=1
+                t.s.sound_and_flash_light()
+                
+        if t.status == 19:
+            # 开始巡线
+            t.follow_line_segment(1,40,3,False)
+            t.s.sound_and_flash_light()
+            t.status+=1
+
+        if t.status == 21:
+            if linefollower.detect_main() == False:
+                t.status+=1
+                t.s.sound_and_flash_light()
+
+        if t.status == 22:
+            t.follow_line_segment(-1,40,3,True)
+            t.s.sound_and_flash_light()
+            t.status+=1
+        
+
+    task4_timer.init(mode=Timer.PERIODIC, period=25, callback=callback_task_4)
+
+
+
+def test():
+    '''
+    任务4，直线行驶+巡线
+    '''
+    
+    t=FollowLineClass()
+            
+    linefollower = line_follower(D_1,D_2,D_3,D_4,D_5)
+    
+    utime.sleep(2)
+
+    t.s.motor_run(120)
+    
+    task4_timer=Timer()
+    
+    t.status = 0  #一开始是0，第一次碰到黑线+1，改变callback逻辑为巡线，之后再+1
+    
+    def callback_task_4(timer):
+        # Lap 1
+        if t.status == 0:
+            if linefollower.detect_main() == False:
+                t.status+=1
+                t.s.sound_and_flash_light()
+                
+        if t.status == 1:
+            # 开始巡线
+            t.follow_line_segment(-1,40,3,False)
+            t.s.sound_and_flash_light()
+            t.status+=1
+
+        if t.status == 3:
+            if linefollower.detect_main() == False:
+                t.status+=1
+                t.s.sound_and_flash_light()
+
+        if t.status == 4:
+            t.follow_line_segment(1,40,3,False)
+            t.s.sound_and_flash_light()
+            t.status+=1
+
+
+    task4_timer.init(mode=Timer.PERIODIC, period=25, callback=callback_task_4)
 
 
 
@@ -675,7 +723,7 @@ if __name__ == '__main__':
 #     s.end_process()
 
 
-    task1()
+    task4()
 
 #     t=FollowLineClass()
 #     t.s.motor_run(100)
@@ -685,6 +733,8 @@ if __name__ == '__main__':
 #     t.s.end_process()
 #     t.deinit()
     
+
+
 
 
 
