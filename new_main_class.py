@@ -578,88 +578,91 @@ def task4():
                 t.status+=1
                 t.s.sound_and_flash_light()
                 
-        if t.status == 1:
+        elif t.status == 1:
             # 开始巡线
             t.follow_line_segment(1,38,3,False)
             t.s.sound_and_flash_light()
             t.status+=1
 
-        if t.status == 3:
+        elif t.status == 3:
             if linefollower.detect_main() == False:
                 t.status+=1
                 t.s.sound_and_flash_light()
 
-        if t.status == 4:
+        elif t.status == 4:
             t.follow_line_segment(-1,40,3,False)
             t.s.sound_and_flash_light()
             t.status+=1
 
         # Lap 2
-        if t.status == 6:
+        elif t.status == 6:
             if linefollower.detect_main() == False:
                 t.status+=1
                 t.s.sound_and_flash_light()
                 
-        if t.status == 7:
+        elif t.status == 7:
             # 开始巡线
             t.follow_line_segment(1,40,3,False)
             t.s.sound_and_flash_light()
             t.status+=1
 
-        if t.status == 9:
+        elif t.status == 9:
             if linefollower.detect_main() == False:
                 t.status+=1
                 t.s.sound_and_flash_light()
 
-        if t.status == 10:
+        elif t.status == 10:
             t.follow_line_segment(-1,40,3,False)
             t.s.sound_and_flash_light()
             t.status+=1
 
         # Lap 3
-        if t.status == 12:
+        elif t.status == 12:
             if linefollower.detect_main() == False:
                 t.status+=1
                 t.s.sound_and_flash_light()
                 
-        if t.status == 13:
+        elif t.status == 13:
             # 开始巡线
             t.follow_line_segment(1,40,3,False)
             t.s.sound_and_flash_light()
             t.status+=1
 
-        if t.status == 15:
+        elif t.status == 15:
             if linefollower.detect_main() == False:
                 t.status+=1
                 t.s.sound_and_flash_light()
 
 
-        if t.status == 16:
+        elif t.status == 16:
             t.follow_line_segment(-1,40,3,False)
             t.s.sound_and_flash_light()
             t.status+=1
 
         # Lap 4
-        if t.status == 18:
+        elif t.status == 18:
             if linefollower.detect_main() == False:
                 t.status+=1
                 t.s.sound_and_flash_light()
                 
-        if t.status == 19:
+        elif t.status == 19:
             # 开始巡线
             t.follow_line_segment(1,40,3,False)
             t.s.sound_and_flash_light()
             t.status+=1
 
-        if t.status == 21:
+        elif t.status == 21:
             if linefollower.detect_main() == False:
                 t.status+=1
                 t.s.sound_and_flash_light()
 
-        if t.status == 22:
+        elif t.status == 22:
             t.follow_line_segment(-1,40,3,True)
             t.s.sound_and_flash_light()
             t.status+=1
+
+        else:
+            pass
         
 
     task4_timer.init(mode=Timer.PERIODIC, period=25, callback=callback_task_4)
