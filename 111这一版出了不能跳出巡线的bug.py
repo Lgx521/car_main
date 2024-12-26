@@ -4,6 +4,7 @@ import utime
 from jy61p import jy61p_i2c
 
 
+
 ## 常数
 LEFT = -1
 RIGHT = 1
